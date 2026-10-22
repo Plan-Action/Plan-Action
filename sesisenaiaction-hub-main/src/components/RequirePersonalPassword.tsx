@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Navigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { backend as supabase } from "@/integrations/neon/client";
 
 export function RequirePersonalPassword({ children }: { children: ReactNode }) {
   const [access, setAccess] = useState<"loading" | "login" | "password" | "allowed">("loading");
