@@ -14,9 +14,14 @@ const token = async () => {
   if(cachedToken && cachedToken.expires > Date.now()+30000) return cachedToken.value;
   if(tokenFlight) return tokenFlight;
   tokenFlight=(async()=>{
-    const result = await neonAuth.token({query:{}});
-    if (result.error || !result.data?.token) throw new Error('Sessão expirada. Entre novamente.');
-    const value=result.data.token;
+    // Use the provider's documented JWT endpoint with its HttpOnly session
+    // cookie. The installed SDK's token helper can return no token after a
+    // session read, despite a valid authenticated session.
+    const response=await fetch(`${authUrl}/token`,{credentials:'include',cache:'no-store'});
+    if(!response.ok) throw new Error('Sessão expirada. Entre novamente.');
+    const result=await response.json();
+    if(typeof result.token!=='string') throw new Error('Sessão expirada. Entre novamente.');
+    const value=result.token;
     // Expiry only schedules refresh. Authorization is always verified by Neon.
     const claims=JSON.parse(atob(value.split('.')[1].replace(/-/g,'+').replace(/_/g,'/')));
     cachedToken={value,expires:Number(claims.exp)*1000};return value;
