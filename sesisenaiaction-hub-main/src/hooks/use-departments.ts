@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { backend as supabase } from "@/integrations/neon/client";
 import { toast } from "sonner";
 
 export function useDepartments() {

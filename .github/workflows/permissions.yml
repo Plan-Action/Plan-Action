@@ -28,6 +28,8 @@ jobs:
       - run: npm run test:navigation
       - name: Validate legacy migration inventory
         run: node --test scripts/test-inventory-legacy.mjs
+      - name: Validate Neon client error boundaries
+        run: node --test scripts/test-neon-client-errors.mjs
       - name: Verify reviewed dependency fixes
         run: npm run audit:dependencies
       - name: Install isolated PostgreSQL test runtime

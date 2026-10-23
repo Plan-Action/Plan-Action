@@ -27,7 +27,7 @@ test('production routes and assets carry protective response headers', async () 
     for (const path of ['/auth', '/dashboard', '/plans/example/edit', script, '/missing.js']) {
       const response = await fetch(origin + path);
       assert.equal(response.status, path === '/missing.js' ? 404 : 200);
-      for (const [name, value] of Object.entries(securityHeaders(built.supabaseOrigin))) assert.equal(response.headers.get(name), value);
+      for (const [name, value] of Object.entries(built.headers)) assert.equal(response.headers.get(name), value);
       if (path === '/auth') assert.equal(await response.text(), html);
     }
     assert.equal((await fetch(origin + '/auth', { method: 'POST' })).status, 405);
@@ -64,11 +64,15 @@ test('CSP limits connections to the configured Supabase origin', () => {
 
 test('static deployment artifacts use the same policy and origin as the server', async () => {
   const headers = await readFile('dist/_headers', 'utf8');
-  for (const [name, value] of Object.entries(securityHeaders(built.supabaseOrigin))) assert.ok(headers.includes(`  ${name}: ${value}\n`));
+  for (const [name, value] of Object.entries(built.headers)) assert.ok(headers.includes(`  ${name}: ${value}\n`));
   const html = await readFile('dist/index.html', 'utf8');
   assert.match(html, /http-equiv="Content-Security-Policy"/);
   assert.ok(html.indexOf('Content-Security-Policy') < html.indexOf('<script'));
   assert.ok(!html.match(/<meta[^>]+frame-ancestors/));
   assert.match(html, /name="referrer" content="strict-origin-when-cross-origin"/);
-  assert.ok(html.includes(built.supabaseOrigin));
+  assert.ok(html.includes(built.authOrigin));
+  assert.ok(html.includes(built.dataOrigin));
+  const connect=built.headers['Content-Security-Policy'].split(';').find(d=>d.trim().startsWith('connect-src'));
+  assert.equal(connect.trim(), `connect-src 'self' ${built.authOrigin} ${built.dataOrigin}`);
+  assert.ok(!connect.includes('supabase.co'));
 });

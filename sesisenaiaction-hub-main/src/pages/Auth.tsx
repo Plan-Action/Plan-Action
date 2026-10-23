@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { backend as supabase } from "@/integrations/neon/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { toast } from "sonner";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { InitialPassword } from "@/components/InitialPassword";
-import { passwordError, PASSWORD_MIN_LENGTH, PASSWORD_HINT } from "../../supabase/functions/_shared/password-policy";
+import { passwordError, PASSWORD_MIN_LENGTH, PASSWORD_HINT } from "@/lib/password-policy";
 
 export default function Auth() {
   const navigate = useNavigate();

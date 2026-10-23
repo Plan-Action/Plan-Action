@@ -1,0 +1,1 @@
+{"name":"plan-action-vercel-neon-test","private":true,"type":"module","scripts":{"build":"node build.mjs","test":"node --test test/*.test.mjs","test:connection":"node --env-file=.env.local scripts/check-connection.mjs"},"dependencies":{"@neondatabase/serverless":"1.2.0"},"engines":{"node":">=22"}}

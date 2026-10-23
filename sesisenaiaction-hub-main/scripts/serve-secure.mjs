@@ -11,7 +11,7 @@ const types = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; ch
 export function createSecureServer({ directory = resolve('dist'), supabaseOrigin = process.env.SUPABASE_ORIGIN } = {}) {
   const root = resolve(directory);
   const built = JSON.parse(readFileSync(resolve(root, 'security-config.json'), 'utf8'));
-  const headers = securityHeaders(built.supabaseOrigin);
+  const headers = built.headers ?? securityHeaders(built.supabaseOrigin);
   if (supabaseOrigin && new URL(supabaseOrigin).origin !== built.supabaseOrigin) {
     throw new Error('SUPABASE_ORIGIN differs from the build. Rebuild with VITE_SUPABASE_URL.');
   }

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { backend as supabase } from "@/integrations/neon/client";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -32,7 +32,7 @@ interface Plan {
   expected_result: string;
   where_location: string;
   how_to_execute: string;
-  estimated_cost: number;
+  estimated_cost: number | null;
   start_date: string;
   end_date: string;
   status: string;
@@ -307,7 +307,7 @@ export default function PlanDetails() {
             <div>
               <p className="text-sm text-muted-foreground">Quanto</p>
               <p className="font-medium">
-                {Number(plan.estimated_cost || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                {plan.estimated_cost == null ? "Não informado" : Number(plan.estimated_cost).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
               </p>
             </div>
             <div>

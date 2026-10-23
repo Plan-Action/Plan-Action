@@ -28,7 +28,7 @@ export type Database = {
           created_by: string
           description: string
           end_date: string
-          estimated_cost: number
+          estimated_cost: number | null
           expected_result: string
           how_to_execute: string
           id: string
@@ -47,7 +47,7 @@ export type Database = {
           created_by: string
           description: string
           end_date: string
-          estimated_cost?: number
+          estimated_cost?: number | null
           expected_result?: string
           how_to_execute?: string
           id?: string
@@ -66,7 +66,7 @@ export type Database = {
           created_by?: string
           description?: string
           end_date?: string
-          estimated_cost?: number
+          estimated_cost?: number | null
           expected_result?: string
           how_to_execute?: string
           id?: string

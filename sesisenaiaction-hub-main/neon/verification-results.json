@@ -1,0 +1,22 @@
+{
+  "date": "2026-10-22",
+  "checks": [
+    "coordinator provisioning and mandatory password",
+    "teacher provisioning and mandatory password",
+    "coordinator creates plan atomically",
+    "assigned teacher can read",
+    "other department cannot read",
+    "teacher cannot edit",
+    "cross-department assignment rolls back",
+    "normal admin cannot create users",
+    "principal admin protected",
+    "normal admin cannot remove admin/self",
+    "normal admin removes teacher",
+    "existing JWT loses app access after removal",
+    "coordinator edits plan",
+    "anonymous access denied",
+    "admin has global view"
+  ],
+  "syntheticPlanId": "5c7fc681-f60e-41b2-9cfb-43cf0b0764e0",
+  "passed": true
+}

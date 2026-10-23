@@ -1,7 +1,7 @@
-import { passwordError, PASSWORD_HINT, PASSWORD_MIN_LENGTH } from "../../supabase/functions/_shared/password-policy";
+import { passwordError, PASSWORD_HINT, PASSWORD_MIN_LENGTH } from "@/lib/password-policy";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { backend as supabase } from "@/integrations/neon/client";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -39,7 +39,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { FunctionsHttpError } from "@supabase/supabase-js";
+
 
 import { useDepartments } from "@/hooks/use-departments";
 
@@ -53,10 +53,6 @@ interface UserProfile {
 }
 
 async function getFunctionErrorMessage(error: unknown) {
-  if (error instanceof FunctionsHttpError) {
-    const payload = await error.context.json().catch(() => null);
-    if (payload && typeof payload.error === "string") return payload.error;
-  }
 
   return error instanceof Error ? error.message : "Ocorreu um erro inesperado";
 }
@@ -194,7 +190,7 @@ export default function Users() {
       setProfessors(professors.filter((p) => p.id !== userId));
       setFilteredProfessors(filteredProfessors.filter((p) => p.id !== userId));
       
-      toast.success(`Usuário ${userName} excluído permanentemente do sistema!`);
+      toast.success(`Usuário ${userName} removido do acesso ao sistema!`);
     } catch (error: unknown) {
       console.error("Erro capturado:", error);
       toast.error(await getFunctionErrorMessage(error));

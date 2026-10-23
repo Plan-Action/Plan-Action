@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { backend as supabase } from "@/integrations/neon/client";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -180,7 +180,7 @@ export default function Account() {
                   >
                     Cancelar
                   </Button>
-                  <Button type="submit" disabled={saving}>
+                  <Button type="submit" disabled={saving || !!profile?.is_absolute_admin}>
                     {saving ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />

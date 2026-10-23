@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { backend as supabase } from "@/integrations/neon/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { passwordError, PASSWORD_HINT, PASSWORD_MIN_LENGTH } from "../../supabase/functions/_shared/password-policy";
+import { passwordError, PASSWORD_HINT, PASSWORD_MIN_LENGTH } from "@/lib/password-policy";
 import { toast } from "sonner";
 
 export function InitialPassword() {

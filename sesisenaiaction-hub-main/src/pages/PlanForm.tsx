@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { backend as supabase } from "@/integrations/neon/client";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -46,7 +46,7 @@ export default function PlanForm() {
     expected_result: "",
     where_location: "",
     how_to_execute: "",
-    estimated_cost: "0",
+    estimated_cost: "",
     start_date: "",
     end_date: "",
     status: "planning",
@@ -97,7 +97,7 @@ export default function PlanForm() {
           expected_result: plan.expected_result || "",
           where_location: plan.where_location || "",
           how_to_execute: plan.how_to_execute || "",
-          estimated_cost: String(plan.estimated_cost ?? 0),
+          estimated_cost: plan.estimated_cost == null ? "" : String(plan.estimated_cost),
           start_date: plan.start_date,
           end_date: plan.end_date,
           status: plan.status,
@@ -164,8 +164,8 @@ export default function PlanForm() {
       return;
     }
 
-    const estimatedCost = Number(formData.estimated_cost);
-    if (!Number.isFinite(estimatedCost) || estimatedCost < 0) {
+    const estimatedCost = formData.estimated_cost.trim() === "" ? null : Number(formData.estimated_cost);
+    if (estimatedCost !== null && (!Number.isFinite(estimatedCost) || estimatedCost < 0)) {
       toast.error("Informe um custo estimado válido");
       return;
     }
