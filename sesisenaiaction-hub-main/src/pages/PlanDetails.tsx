@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { backend as supabase } from "@/integrations/neon/client";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { ArrowLeft, Edit, Calendar, Target, Users, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { planFilterSuffix } from "@/lib/plan-navigation";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -31,7 +32,7 @@ interface Plan {
   expected_result: string;
   where_location: string;
   how_to_execute: string;
-  estimated_cost: number;
+  estimated_cost: number | null;
   start_date: string;
   end_date: string;
   status: string;
@@ -51,6 +52,9 @@ interface Professor {
 export default function PlanDetails() {
   const navigate = useNavigate();
   const { id } = useParams();
+  const [params] = useSearchParams();
+  const filterSuffix = planFilterSuffix(params);
+  const listPath = `/plans${filterSuffix}`;
   const [plan, setPlan] = useState<Plan | null>(null);
   const [professors, setProfessors] = useState<Professor[]>([]);
   const [loading, setLoading] = useState(true);
@@ -110,7 +114,7 @@ export default function PlanDetails() {
       toast.error("Erro ao deletar plano");
     } else {
       toast.success("Plano deletado");
-      navigate("/plans");
+      navigate(listPath);
     }
   };
 
@@ -171,7 +175,7 @@ export default function PlanDetails() {
       <div className="max-w-5xl mx-auto space-y-6">
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-start gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate("/plans")}>
+            <Button variant="ghost" size="icon" aria-label="Voltar aos planos" onClick={() => navigate(listPath)}>
               <ArrowLeft className="w-5 h-5" />
             </Button>
             <div>
@@ -183,7 +187,7 @@ export default function PlanDetails() {
           </div>
           {canEdit && (
             <div className="flex flex-wrap gap-2">
-              <Button variant="outline" onClick={() => navigate(`/plans/${id}/edit`)}>
+              <Button variant="outline" onClick={() => navigate(`/plans/${id}/edit${filterSuffix}`)}>
                 <Edit className="mr-2 w-4 h-4" />
                 Editar
               </Button>
@@ -303,7 +307,7 @@ export default function PlanDetails() {
             <div>
               <p className="text-sm text-muted-foreground">Quanto</p>
               <p className="font-medium">
-                {Number(plan.estimated_cost || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                {plan.estimated_cost == null ? "Não informado" : Number(plan.estimated_cost).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
               </p>
             </div>
             <div>

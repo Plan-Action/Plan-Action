@@ -1,3 +1,4 @@
+import { passwordError } from '@/lib/password-policy';
 import { createAuthClient } from '@neondatabase/auth';
 import { PostgrestClient } from '@supabase/postgrest-js';
 import type { Database } from '../supabase/types';
@@ -32,7 +33,10 @@ const dataClient = new PostgrestClient<Database>(dataUrl, {
   fetch: async (input, init) => {
     const headers = new Headers(init?.headers);
     headers.set('Authorization', `Bearer ${await token()}`);
-    return fetch(input, {...init, headers});
+    const response = await fetch(input, {...init, headers});
+    if (response.ok) return response;
+    // Do not expose database messages, details or hints through PostgREST errors.
+    return new Response(JSON.stringify({code:'APPLICATION_REQUEST_FAILED',message:'Não foi possível concluir a solicitação. Confira seus dados e permissões.',details:null,hint:null}), {status:response.status,headers:{'Content-Type':'application/json'}});
   },
 });
 
@@ -63,7 +67,7 @@ export const backend = {
     signInWithPassword: async ({email,password}:{email:string;password:string}) => {
       cachedToken=null;
       const result=await neonAuth.signIn.email({email,password});
-      if(result.error) return result;
+      if(result.error) return {data:null,error:new Error('Não foi possível autenticar ou concluir a operação. Confira os dados informados.')};
       const session=await getSession();
       if(session.error || !session.data.session){await neonAuth.signOut({});return {error:session.error??new Error('Acesso não cadastrado')};}
       notify();return {data:session.data,error:null};
@@ -76,13 +80,17 @@ export const backend = {
     invoke: async (name:string,{body}:{body:Record<string,unknown>}) => {
       try {
         if(name==='complete-initial-password') {
+          const invalid=passwordError(String(body.new_password??''));
+          if(invalid)return {data:null,error:new Error(invalid)};
           const result=await neonAuth.changePassword({currentPassword:String(body.current_password),newPassword:String(body.new_password),revokeOtherSessions:true});
-          if(result.error) return result;
+          if(result.error) return {data:null,error:new Error('Não foi possível autenticar ou concluir a operação. Confira os dados informados.')};
           await neonAuth.signOut({});cachedToken=null;notify();return {data:{ok:true},error:null};
         }
         if(name==='create-user-account') {
+          const invalid=passwordError(String(body.user_password??''));
+          if(invalid)return {data:null,error:new Error(invalid)};
           const result=await neonAuth.admin.createUser({email:String(body.user_email),password:String(body.user_password),name:String(body.user_full_name),role:'user'});
-          if(result.error || !result.data?.user) return {data:null,error:result.error??new Error('Não foi possível criar o acesso')};
+          if(result.error || !result.data?.user) return {data:null,error:new Error('Não foi possível criar o acesso. Confira os dados e sua permissão.')};
           const enrolled=await dataClient.rpc('enroll_user' as never, {target_user_id:result.data.user.id,full_name:body.user_full_name,user_role:body.user_role,user_department:body.user_role==='admin'?null:body.user_department} as never);
           if(enrolled.error) return enrolled;
           return {data:{ok:true},error:null};

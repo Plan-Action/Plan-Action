@@ -11,6 +11,9 @@
     "preview": "vite preview",
     "start": "node scripts/serve-secure.mjs",
     "test:security": "node --test scripts/test-security.mjs scripts/test-sites-worker.mjs",
+    "test:navigation": "node --test scripts/test-plan-navigation.mjs",
+    "test:navigation:browser": "node --test scripts/test-plan-navigation-browser.mjs",
+    "audit:dependencies": "node scripts/audit-jean-dependencies.mjs",
     "verify:hosting": "node scripts/verify-hosting.mjs",
     "test:neon": "node scripts/test-neon-flow.mjs && node scripts/test-neon-permissions.mjs"
   },

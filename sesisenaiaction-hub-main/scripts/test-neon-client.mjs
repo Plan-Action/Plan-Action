@@ -18,12 +18,13 @@ globalThis.fetch=async(input,options={})=>{
 };
 try {
  const {backend}=await import('../.vercel/test-client.mjs');
- const credentials=JSON.parse(await readFile('.admin-credentials.local','utf8'));
+ // Use a dedicated enrolled fixture, never the principal Admin's credentials.
+ const credentials=JSON.parse(await readFile('.test-client-credentials.local','utf8'));
  const login=await backend.auth.signInWithPassword({email:credentials.email,password:credentials.password});
  assert.equal(login.error,null,'The application client must accept the valid Admin login');
  const session=await backend.auth.getSession();
  assert.equal(session.error,null);assert.equal(session.data.session?.user.email,credentials.email);
- assert.equal(session.data.session.user.app_metadata.must_change_password,true);
+ assert.equal(session.data.session.user.app_metadata.must_change_password,credentials.mustChangePassword);
  const user=await backend.auth.getUser();assert.equal(user.data.user?.id,session.data.session.user.id);
- console.log(JSON.stringify({applicationClientLogin:true,sessionRestored:true,initialPasswordScreen:true}));
+ console.log(JSON.stringify({applicationClientLogin:true,sessionRestored:true,passwordStateVerified:true}));
 }finally{globalThis.fetch=originalFetch;}
