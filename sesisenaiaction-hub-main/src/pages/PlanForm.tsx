@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ import { ArrowLeft, Loader2, Save, Search } from "lucide-react";
 import { format } from "date-fns";
 
 import { useDepartments } from "@/hooks/use-departments";
+import { planFilterSuffix } from "@/lib/plan-navigation";
 
 interface Professor {
   id: string;
@@ -24,6 +25,9 @@ interface Professor {
 export default function PlanForm() {
   const navigate = useNavigate();
   const { id } = useParams();
+  const [params] = useSearchParams();
+  const filterSuffix = planFilterSuffix(params);
+  const listPath = `/plans${filterSuffix}`;
   const isEditing = !!id;
 
   const [loading, setLoading] = useState(false);
@@ -180,7 +184,7 @@ export default function PlanForm() {
       if (error) throw error;
 
       toast.success(isEditing ? "Plano atualizado!" : "Plano criado!");
-      navigate(`/plans/${planId}`);
+      navigate(`/plans/${planId}${filterSuffix}`);
     } catch (error: unknown) {
       toast.error((error instanceof Error ? error.message : typeof error === "object" && error && "message" in error ? String(error.message) : "") || "Erro ao salvar plano");
     } finally {
@@ -198,7 +202,7 @@ export default function PlanForm() {
     <DashboardLayout>
       <div className="max-w-4xl mx-auto space-y-6">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/plans")}>
+          <Button variant="ghost" size="icon" aria-label="Voltar aos planos" onClick={() => navigate(listPath)}>
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div>
@@ -474,7 +478,7 @@ export default function PlanForm() {
           </Card>
 
           <div className="flex justify-end gap-4">
-            <Button type="button" variant="outline" onClick={() => navigate("/plans")}>
+            <Button type="button" variant="outline" onClick={() => navigate(listPath)}>
               Cancelar
             </Button>
             <Button type="submit" disabled={loading || participantsLoading}>
