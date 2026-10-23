@@ -1,5 +1,3 @@
-import { addDays, format } from "date-fns";
-
 const statuses = ["planning", "in_progress", "completed", "cancelled", "active"];
 const priorities = ["low", "medium", "high", "urgent"];
 const deadlines = ["overdue", "upcoming"];
@@ -43,8 +41,11 @@ export function planFilterSuffix(params: URLSearchParams): string {
 
 export function filterPlans<T extends { title: string; description: string | null; department: string | null; status: string; priority: string; end_date: string }>(plans: T[], filters: PlanFilters): T[] {
   const query = filters.search.trim().toLocaleLowerCase("pt-BR");
-  const today = format(new Date(), "yyyy-MM-dd");
-  const nextWeek = format(addDays(new Date(), 7), "yyyy-MM-dd");
+  const dateKey = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+  const today = dateKey(new Date());
+  const weekFromNow = new Date();
+  weekFromNow.setDate(weekFromNow.getDate() + 7);
+  const nextWeek = dateKey(weekFromNow);
   return plans.filter((plan) =>
     (!query || `${plan.title} ${plan.description || ""}`.toLocaleLowerCase("pt-BR").includes(query)) &&
     (filters.department === "all" || plan.department === filters.department) &&
