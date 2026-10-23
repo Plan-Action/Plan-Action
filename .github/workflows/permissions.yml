@@ -26,6 +26,8 @@ jobs:
       - run: npx tsc --noEmit -p tsconfig.app.json
       - run: node --test scripts/test-user-management.mjs
       - run: npm run test:navigation
+      - name: Validate legacy migration inventory
+        run: node --test scripts/test-inventory-legacy.mjs
       - name: Verify reviewed dependency fixes
         run: npm run audit:dependencies
       - name: Install isolated PostgreSQL test runtime
