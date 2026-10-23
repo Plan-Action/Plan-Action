@@ -1,11 +1,13 @@
-const statuses = ["planning", "in_progress", "completed", "cancelled"];
+const statuses = ["planning", "in_progress", "completed", "cancelled", "active"];
 const priorities = ["low", "medium", "high", "urgent"];
+const deadlines = ["overdue", "upcoming"];
 
 export interface PlanFilters {
   search: string;
   department: string;
   status: string;
   priority: string;
+  deadline: string;
 }
 
 export function readPlanFilters(params: URLSearchParams): PlanFilters {
@@ -16,6 +18,7 @@ export function readPlanFilters(params: URLSearchParams): PlanFilters {
     department: params.get("department") || "all",
     status: statuses.includes(status) ? status : "all",
     priority: priorities.includes(priority) ? priority : "all",
+    deadline: deadlines.includes(params.get("deadline") || "") ? params.get("deadline") || "all" : "all",
   };
 }
 
@@ -25,6 +28,7 @@ export function writePlanFilters(filters: PlanFilters): URLSearchParams {
   if (filters.department && filters.department !== "all") params.set("department", filters.department);
   if (statuses.includes(filters.status)) params.set("status", filters.status);
   if (priorities.includes(filters.priority)) params.set("priority", filters.priority);
+  if (deadlines.includes(filters.deadline)) params.set("deadline", filters.deadline);
   return params;
 }
 
@@ -35,12 +39,18 @@ export function planFilterSuffix(params: URLSearchParams): string {
   return query ? `?${query}` : "";
 }
 
-export function filterPlans<T extends { title: string; description: string | null; department: string | null; status: string; priority: string }>(plans: T[], filters: PlanFilters): T[] {
+export function filterPlans<T extends { title: string; description: string | null; department: string | null; status: string; priority: string; end_date: string }>(plans: T[], filters: PlanFilters): T[] {
   const query = filters.search.trim().toLocaleLowerCase("pt-BR");
+  const dateKey = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+  const today = dateKey(new Date());
+  const weekFromNow = new Date();
+  weekFromNow.setDate(weekFromNow.getDate() + 7);
+  const nextWeek = dateKey(weekFromNow);
   return plans.filter((plan) =>
     (!query || `${plan.title} ${plan.description || ""}`.toLocaleLowerCase("pt-BR").includes(query)) &&
     (filters.department === "all" || plan.department === filters.department) &&
-    (filters.status === "all" || plan.status === filters.status) &&
-    (filters.priority === "all" || plan.priority === filters.priority)
+    (filters.status === "all" || (filters.status === "active" ? ["planning", "in_progress"].includes(plan.status) : plan.status === filters.status)) &&
+    (filters.priority === "all" || plan.priority === filters.priority) &&
+    (filters.deadline === "all" || (filters.deadline === "overdue" ? ["planning", "in_progress"].includes(plan.status) && plan.end_date < today : ["planning", "in_progress"].includes(plan.status) && plan.end_date >= today && plan.end_date <= nextWeek))
   );
 }

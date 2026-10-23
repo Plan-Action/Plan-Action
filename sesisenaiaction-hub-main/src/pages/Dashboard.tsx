@@ -110,6 +110,7 @@ export default function Dashboard() {
             value={loadFailed ? "—" : stats.totalPlans}
             icon={ClipboardList}
             loading={loading}
+            onClick={() => navigate("/plans")}
           />
           <StatCard
             title="Planos Ativos"
@@ -117,6 +118,7 @@ export default function Dashboard() {
             icon={Clock}
             loading={loading}
             variant="primary"
+            onClick={() => navigate("/plans?status=active")}
           />
           <StatCard
             title="Concluídos"
@@ -124,6 +126,7 @@ export default function Dashboard() {
             icon={CheckCircle2}
             loading={loading}
             variant="secondary"
+            onClick={() => navigate("/plans?status=completed")}
           />
           <StatCard
             title="Professores"
@@ -142,19 +145,19 @@ export default function Dashboard() {
                 { label: "Em planejamento", count: overview.planning },
                 { label: "Concluídos", count: overview.completed },
                 ...(overview.cancelled ? [{ label: "Cancelados", count: overview.cancelled }] : []),
-              ].map((item) => <div key={item.label} className="grid grid-cols-[8.5rem_1fr_1.5rem] items-center gap-3 text-sm">
+              ].map((item) => <button key={item.label} type="button" aria-label={`Abrir ${item.count} planos: ${item.label}`} onClick={() => navigate(`/plans?status=${item.label === "Em andamento" ? "in_progress" : item.label === "Em planejamento" ? "planning" : item.label === "Concluídos" ? "completed" : "cancelled"}`)} className="grid w-full grid-cols-[8.5rem_1fr_1.5rem] items-center gap-3 rounded-sm text-left text-sm hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                 <span>{item.label}</span>
                 <div className="h-2 bg-muted" aria-hidden="true"><div className={`h-full ${item.label === "Concluídos" ? "bg-green-600 dark:bg-green-500" : "bg-primary"}`} style={{ width: `${item.count / stats.totalPlans * 100}%` }} /></div>
                 <span className="text-right font-medium tabular-nums">{item.count}</span>
-              </div>)}
+              </button>)}
             </CardContent>
           </Card>
           <Card className="shadow-none">
             <CardHeader className="border-b py-4"><CardTitle className="text-base">Atenção aos prazos</CardTitle></CardHeader>
             <CardContent className="pt-5">
               {loading ? <Skeleton className="h-32 w-full" /> : loadFailed ? <p className="text-sm text-muted-foreground">Prazos indisponíveis. Atualize a página.</p> : <>
-                <div className="flex items-center gap-4 border-b pb-4 text-destructive"><span className="text-3xl font-semibold tabular-nums">{overview.overdue}</span><span className="text-sm">{overview.overdue === 1 ? "Plano atrasado" : "Planos atrasados"}</span></div>
-                <div className="flex items-center gap-4 py-4 text-primary"><span className="text-3xl font-semibold tabular-nums">{overview.upcoming}</span><span className="text-sm">{overview.upcoming === 1 ? "Vence nos próximos 7 dias" : "Vencem nos próximos 7 dias"}</span></div>
+                <button type="button" aria-label={`Abrir ${overview.overdue} planos atrasados`} onClick={() => navigate("/plans?deadline=overdue")} className="flex w-full items-center gap-4 border-b pb-4 text-left text-destructive hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><span className="text-3xl font-semibold tabular-nums">{overview.overdue}</span><span className="text-sm">{overview.overdue === 1 ? "Plano atrasado" : "Planos atrasados"}</span></button>
+                <button type="button" aria-label={`Abrir ${overview.upcoming} planos com vencimento nos próximos 7 dias`} onClick={() => navigate("/plans?deadline=upcoming")} className="flex w-full items-center gap-4 py-4 text-left text-primary hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><span className="text-3xl font-semibold tabular-nums">{overview.upcoming}</span><span className="text-sm">{overview.upcoming === 1 ? "Vence nos próximos 7 dias" : "Vencem nos próximos 7 dias"}</span></button>
               </>}
               <Button variant="link" className="h-auto px-0" onClick={() => navigate("/plans")}>Ver planos <ArrowRight className="ml-2 h-4 w-4" /></Button>
             </CardContent>
