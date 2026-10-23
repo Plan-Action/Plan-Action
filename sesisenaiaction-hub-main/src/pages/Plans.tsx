@@ -34,9 +34,9 @@ export default function Plans() {
   const [refreshVersion, setRefreshVersion] = useState(0);
   const [params, setParams] = useSearchParams();
   const filters = readPlanFilters(params);
-  const { search, department: departmentFilter, status: statusFilter, priority: priorityFilter } = filters;
+  const { search, department: departmentFilter, status: statusFilter, priority: priorityFilter, deadline: deadlineFilter } = filters;
   const filterSuffix = planFilterSuffix(params);
-  const hasFilters = Boolean(search.trim() || departmentFilter !== "all" || statusFilter !== "all" || priorityFilter !== "all");
+  const hasFilters = Boolean(search.trim() || departmentFilter !== "all" || statusFilter !== "all" || priorityFilter !== "all" || deadlineFilter !== "all");
   const filteredPlans = filterPlans(plans, filters);
   const updateFilter = (key: keyof PlanFilters, value: string) => {
     setParams((current) => writePlanFilters({ ...readPlanFilters(current), [key]: value }), { replace: true });
@@ -138,7 +138,7 @@ export default function Plans() {
           )}
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(240px,1fr)_240px_180px_180px]">
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(240px,1fr)_220px_170px_170px_190px]">
           <div className="relative min-w-0">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground dark:text-white w-4 h-4" />
             <Input
@@ -167,10 +167,19 @@ export default function Plans() {
             <SelectTrigger aria-label="Filtrar por status"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos os status</SelectItem>
+              <SelectItem value="active">Ativos</SelectItem>
               <SelectItem value="planning">Planejamento</SelectItem>
               <SelectItem value="in_progress">Em Andamento</SelectItem>
               <SelectItem value="completed">Concluído</SelectItem>
               <SelectItem value="cancelled">Cancelado</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={deadlineFilter} onValueChange={(value) => updateFilter("deadline", value)}>
+            <SelectTrigger aria-label="Filtrar por prazo"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os prazos</SelectItem>
+              <SelectItem value="overdue">Atrasados</SelectItem>
+              <SelectItem value="upcoming">Vencem em até 7 dias</SelectItem>
             </SelectContent>
           </Select>
           <Select value={priorityFilter} onValueChange={(value) => updateFilter("priority", value)}>
