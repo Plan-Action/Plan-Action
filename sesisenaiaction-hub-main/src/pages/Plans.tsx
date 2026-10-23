@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
@@ -9,9 +9,10 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Search, Eye, Calendar } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useDepartments } from "@/hooks/use-departments";
+import { filterPlans, planFilterSuffix, readPlanFilters, writePlanFilters, type PlanFilters } from "@/lib/plan-navigation";
 
 interface Plan {
   id: string;
@@ -28,60 +29,66 @@ export default function Plans() {
   const navigate = useNavigate();
   const departments = useDepartments();
   const [plans, setPlans] = useState<Plan[]>([]);
-  const [filteredPlans, setFilteredPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
-  const [departmentFilter, setDepartmentFilter] = useState("all");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [priorityFilter, setPriorityFilter] = useState("all");
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [refreshVersion, setRefreshVersion] = useState(0);
+  const [params, setParams] = useSearchParams();
+  const filters = readPlanFilters(params);
+  const { search, department: departmentFilter, status: statusFilter, priority: priorityFilter } = filters;
+  const filterSuffix = planFilterSuffix(params);
+  const hasFilters = Boolean(search.trim() || departmentFilter !== "all" || statusFilter !== "all" || priorityFilter !== "all");
+  const filteredPlans = filterPlans(plans, filters);
+  const updateFilter = (key: keyof PlanFilters, value: string) => {
+    setParams((current) => writePlanFilters({ ...readPlanFilters(current), [key]: value }), { replace: true });
+  };
   const [userRole, setUserRole] = useState<string>("");
 
   useEffect(() => {
+    let active = true;
     const fetchData = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        navigate("/auth");
-        return;
+      setLoading(true);
+      setLoadFailed(false);
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!active) return;
+        if (!session) {
+          navigate("/auth");
+          return;
+        }
+
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("role")
+          .eq("id", session.user.id)
+          .single();
+
+        if (!active) return;
+        if (profile) setUserRole(profile.role);
+
+        // Data API responses are capped. Read every authorized page so filters
+        // do not silently miss plans after the first 1,000 rows.
+        const rows: Plan[] = [];
+        for (let offset = 0; ; offset += 1000) {
+          const { data, error } = await supabase.from("action_plans")
+            .select("id, title, description, status, priority, start_date, end_date, department")
+            .order("created_at", { ascending: false }).order("id")
+            .range(offset, offset + 999);
+          if (!active) return;
+          if (error) throw error;
+          rows.push(...(data || []));
+          if ((data?.length || 0) < 1000) break;
+        }
+        if (active) setPlans(rows);
+      } catch {
+        if (active) { setLoadFailed(true); setPlans([]); }
+      } finally {
+        if (active) setLoading(false);
       }
-
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("id", session.user.id)
-        .single();
-
-      if (profile) setUserRole(profile.role);
-
-      const { data } = await supabase
-        .from("action_plans")
-        .select("*")
-        .order("created_at", { ascending: false });
-
-      if (data) {
-        setPlans(data);
-        setFilteredPlans(data);
-      }
-      setLoading(false);
     };
 
     fetchData();
-  }, [navigate]);
-
-  useEffect(() => {
-    if (search || departmentFilter !== "all" || statusFilter !== "all" || priorityFilter !== "all") {
-      setFilteredPlans(
-        plans.filter((plan) =>
-          (!search || plan.title.toLowerCase().includes(search.toLowerCase()) ||
-            plan.description.toLowerCase().includes(search.toLowerCase())) &&
-          (departmentFilter === "all" || plan.department === departmentFilter) &&
-          (statusFilter === "all" || plan.status === statusFilter) &&
-          (priorityFilter === "all" || plan.priority === priorityFilter)
-        )
-      );
-    } else {
-      setFilteredPlans(plans);
-    }
-  }, [search, departmentFilter, statusFilter, priorityFilter, plans]);
+    return () => { active = false; };
+  }, [navigate, refreshVersion]);
 
   const canCreatePlan = ["admin", "coordenador"].includes(userRole);
 
@@ -124,10 +131,10 @@ export default function Plans() {
             <p className="text-muted-foreground">Gerencie todos os planos de ação</p>
           </div>
           {canCreatePlan && (
-            <Button onClick={() => navigate("/plans/new")} size="lg" className="shadow-lg">
+            <Button asChild size="lg" className="shadow-lg"><Link to={`/plans/new${filterSuffix}`}>
               <Plus className="mr-2 h-5 w-5" />
               Novo Plano
-            </Button>
+            </Link></Button>
           )}
         </div>
 
@@ -138,16 +145,17 @@ export default function Plans() {
               placeholder="Buscar planos..."
               aria-label="Buscar planos"
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => updateFilter("search", e.target.value)}
               className="pl-10"
             />
           </div>
-          <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
+          <Select value={departmentFilter} onValueChange={(value) => updateFilter("department", value)}>
             <SelectTrigger aria-label="Filtrar por departamento">
               <SelectValue placeholder="Filtrar por departamento" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos os departamentos</SelectItem>
+              {departmentFilter !== "all" && !departments.includes(departmentFilter) && <SelectItem value={departmentFilter}>{departmentFilter}</SelectItem>}
               {departments.map((department) => (
                 <SelectItem key={department} value={department}>
                   {department}
@@ -155,7 +163,7 @@ export default function Plans() {
               ))}
             </SelectContent>
           </Select>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <Select value={statusFilter} onValueChange={(value) => updateFilter("status", value)}>
             <SelectTrigger aria-label="Filtrar por status"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos os status</SelectItem>
@@ -165,7 +173,7 @@ export default function Plans() {
               <SelectItem value="cancelled">Cancelado</SelectItem>
             </SelectContent>
           </Select>
-          <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+          <Select value={priorityFilter} onValueChange={(value) => updateFilter("priority", value)}>
             <SelectTrigger aria-label="Filtrar por prioridade"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todas as prioridades</SelectItem>
@@ -176,9 +184,9 @@ export default function Plans() {
             </SelectContent>
           </Select>
         </div>
-        {(search || departmentFilter !== "all" || statusFilter !== "all" || priorityFilter !== "all") && <div className="flex items-center justify-between gap-3">
-          <p role="status" className="text-sm text-muted-foreground">{filteredPlans.length} plano{filteredPlans.length === 1 ? "" : "s"} encontrado{filteredPlans.length === 1 ? "" : "s"}</p>
-          <Button variant="ghost" size="sm" onClick={() => { setSearch(""); setDepartmentFilter("all"); setStatusFilter("all"); setPriorityFilter("all"); }}>Limpar filtros</Button>
+        {hasFilters && <div className="flex flex-wrap items-center justify-between gap-3">
+          <p role="status" className="text-sm text-muted-foreground">{loading ? "Buscando planos..." : loadFailed ? "Consulta indisponível" : `${filteredPlans.length} plano${filteredPlans.length === 1 ? "" : "s"} encontrado${filteredPlans.length === 1 ? "" : "s"}`}</p>
+          <Button variant="ghost" size="sm" onClick={() => setParams({}, { replace: true })}>Limpar filtros</Button>
         </div>}
 
         {loading ? (
@@ -187,11 +195,16 @@ export default function Plans() {
               <Skeleton key={i} className="h-64" />
             ))}
           </div>
+        ) : loadFailed ? (
+          <Card><CardContent className="space-y-4 py-12 text-center">
+            <p role="alert">Não foi possível carregar os planos. Seus filtros foram preservados.</p>
+            <Button variant="outline" onClick={() => setRefreshVersion((version) => version + 1)}>Tentar novamente</Button>
+          </CardContent></Card>
         ) : filteredPlans.length === 0 ? (
           <Card>
             <CardContent className="py-16 text-center">
               <p className="text-muted-foreground">
-                {search || departmentFilter !== "all" || statusFilter !== "all" || priorityFilter !== "all" ? "Nenhum plano encontrado com esses filtros" : "Nenhum plano cadastrado ainda"}
+                {hasFilters ? "Nenhum plano encontrado com esses filtros" : "Nenhum plano cadastrado ainda"}
               </p>
             </CardContent>
           </Card>
@@ -200,13 +213,12 @@ export default function Plans() {
             {filteredPlans.map((plan) => (
               <Card
                 key={plan.id}
-                className="group hover:shadow-lg transition-all cursor-pointer"
-                onClick={() => navigate(`/plans/${plan.id}`)}
+                className="group hover:shadow-lg transition-all"
               >
                 <CardContent className="p-6 space-y-4">
                   <div className="space-y-2">
                     <h3 className="font-semibold text-lg line-clamp-2 group-hover:text-primary transition-colors">
-                      {plan.title}
+                      <Link to={`/plans/${plan.id}${filterSuffix}`} className="rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">{plan.title}</Link>
                     </h3>
                     <p className="text-sm text-muted-foreground line-clamp-2">
                       {plan.description}
@@ -228,15 +240,15 @@ export default function Plans() {
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Calendar className="w-4 h-4 dark:text-white" />
                     <span>
-                      {format(new Date(plan.start_date), "dd MMM", { locale: ptBR })} -{" "}
-                      {format(new Date(plan.end_date), "dd MMM yyyy", { locale: ptBR })}
+                      {format(parseISO(plan.start_date), "dd MMM", { locale: ptBR })} -{" "}
+                      {format(parseISO(plan.end_date), "dd MMM yyyy", { locale: ptBR })}
                     </span>
                   </div>
 
-                  <Button variant="ghost" className="w-full" size="sm">
+                  <Button asChild variant="ghost" className="w-full text-card-foreground" size="sm"><Link to={`/plans/${plan.id}${filterSuffix}`}>
                     <Eye className="mr-2 w-4 h-4" />
                     Ver detalhes
-                  </Button>
+                  </Link></Button>
                 </CardContent>
               </Card>
             ))}

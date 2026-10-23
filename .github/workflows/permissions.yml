@@ -25,10 +25,17 @@ jobs:
       - run: npm run test:security
       - run: npx tsc --noEmit -p tsconfig.app.json
       - run: node --test scripts/test-user-management.mjs
-      - name: Verify Jean's patched dependencies
-        run: node scripts/audit-jean-dependencies.mjs
+      - run: npm run test:navigation
+      - name: Verify reviewed dependency fixes
+        run: npm run audit:dependencies
       - name: Install isolated PostgreSQL test runtime
-        run: npm install --prefix "$RUNNER_TEMP/permission-runtime" --no-package-lock --no-save @electric-sql/pglite@0.3.14
+        run: npm install --prefix "$RUNNER_TEMP/permission-runtime" --no-package-lock --no-save --ignore-scripts @electric-sql/pglite@0.3.14 playwright@1.64.1
+      - name: Install browser for navigation regression checks
+        run: node "$RUNNER_TEMP/permission-runtime/node_modules/playwright/cli.js" install --with-deps chromium
+      - name: Exercise navigation on desktop and mobile
+        run: npm run test:navigation:browser
+        env:
+          PLAYWRIGHT_MODULE: ${{ runner.temp }}/permission-runtime/node_modules/playwright/index.mjs
       - name: Exercise database permissions
         run: node --test scripts/test-permissions.mjs
         env:
