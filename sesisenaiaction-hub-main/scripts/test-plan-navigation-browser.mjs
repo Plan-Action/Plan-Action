@@ -1,5 +1,5 @@
 // Run against the production build with isolated Auth/Data API fixtures.
-// No requests are sent to the real Supabase project.
+// No requests are sent to a real identity or data provider.
 import assert from "node:assert/strict";
 import { mkdir, readFile } from "node:fs/promises";
 import { resolve, join } from "node:path";
@@ -9,7 +9,7 @@ import { createSecureServer } from "./serve-secure.mjs";
 
 const modulePath = process.env.PLAYWRIGHT_MODULE;
 const { chromium } = await import(modulePath ? pathToFileURL(resolve(modulePath)).href : "playwright");
-const { supabaseOrigin } = JSON.parse(await readFile("dist/security-config.json", "utf8"));
+const { authOrigin, dataOrigin } = JSON.parse(await readFile("dist/security-config.json", "utf8"));
 const id = "00000000-0000-0000-0000-000000000001";
 const user = { id, email: "fixture@example.test", app_metadata: {}, user_metadata: {}, aud: "authenticated", role: "authenticated" };
 const profile = { ...user, full_name: "Usuário de teste", department: "Educação", role: "admin", is_absolute_admin: true };
@@ -26,7 +26,6 @@ for (const viewport of [{ width: 1440, height: 1000 }, { width: 390, height: 844
       const context = await browser.newContext({ viewport, timezoneId: "America/Sao_Paulo" });
       const jwt = [Buffer.from('{"alg":"HS256"}').toString("base64url"), Buffer.from(JSON.stringify({ sub: id, exp: Math.floor(Date.now() / 1000) + 3600 })).toString("base64url"), "fixture"].join(".");
       const session = { access_token: jwt, refresh_token: "fixture", expires_at: Math.floor(Date.now() / 1000) + 3600, expires_in: 3600, token_type: "bearer", user };
-      await context.addInitScript(({ key, session }) => localStorage.setItem(key, JSON.stringify(session)), { key: `sb-${new URL(supabaseOrigin).hostname.split(".")[0]}-auth-token`, session });
       const page = await context.newPage();
       const errors = [];
       page.on("pageerror", error => errors.push(error.message));
@@ -38,9 +37,14 @@ for (const viewport of [{ width: 1440, height: 1000 }, { width: 390, height: 844
         const request = route.request();
         const url = new URL(request.url());
         if (url.origin === origin) return route.continue();
-        if (url.origin !== supabaseOrigin) return route.abort();
-        const send = (body, status = 200) => route.fulfill({ status, contentType: "application/json", headers: { "Access-Control-Allow-Origin": "*" }, body: JSON.stringify(body) });
-        if (url.pathname === "/auth/v1/user") return send(user);
+        if (![authOrigin, dataOrigin].includes(url.origin)) return route.abort();
+        const send = (body, status = 200) => route.fulfill({ status, contentType: "application/json", headers: { "Access-Control-Allow-Origin": origin, "Access-Control-Allow-Credentials":"true", "Access-Control-Allow-Headers":"content-type,authorization,x-client-info,prefer,accept-profile,content-profile", "Access-Control-Allow-Methods":"GET,POST,PATCH,DELETE,OPTIONS" }, body: JSON.stringify(body) });
+        if(request.method()==='OPTIONS')return send(null,200);
+        if(url.origin===authOrigin && url.pathname.endsWith('/get-session'))return send({user,session:{id,userId:id,token:'fixture',expiresAt:new Date(Date.now()+3600000).toISOString(),createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()}});
+        if(url.origin===authOrigin && url.pathname.endsWith('/token'))return send({token:jwt});
+        // Data API has a database prefix; table routing remains PostgREST.
+        url.pathname=url.pathname.replace(/^.*?(?=\/rest\/v1)/,'');
+        if(url.pathname==='/rest/v1/rpc/profile_auth_state')return send({enrolled:true,must_change_password:false});
         if (url.pathname === "/rest/v1/profiles") return send(url.searchParams.has("id") ? profile : [profile]);
         if (url.pathname === "/rest/v1/departments") return send([{ name: "Educação" }]);
         if (url.pathname === "/rest/v1/plan_assignments") return send([]);
