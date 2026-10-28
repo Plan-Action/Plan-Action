@@ -44,3 +44,7 @@ jobs:
         run: node --test scripts/test-permissions.mjs
         env:
           PGLITE_MODULE: ${{ runner.temp }}/permission-runtime/node_modules/@electric-sql/pglite/dist/index.js
+      - name: Exercise regional catalog permissions
+        run: node --test scripts/test-regional-catalog.mjs
+        env:
+          PGLITE_MODULE: ${{ runner.temp }}/permission-runtime/node_modules/@electric-sql/pglite/dist/index.js

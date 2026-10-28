@@ -33,6 +33,7 @@ for (const viewport of [{ width: 1440, height: 1000 }, { width: 390, height: 844
       let paginated = false;
       let saved = false;
       let plan = { ...initialPlan };
+      const regional = {units:[],courses:[],offerings:[],classes:[],supervisors:[]};
       await page.route("**/*", async route => {
         const request = route.request();
         const url = new URL(request.url());
@@ -40,6 +41,15 @@ for (const viewport of [{ width: 1440, height: 1000 }, { width: 390, height: 844
         if (![authOrigin, dataOrigin].includes(url.origin)) return route.abort();
         const send = (body, status = 200) => route.fulfill({ status, contentType: "application/json", headers: { "Access-Control-Allow-Origin": origin, "Access-Control-Allow-Credentials":"true", "Access-Control-Allow-Headers":"content-type,authorization,x-client-info,prefer,accept-profile,content-profile", "Access-Control-Allow-Methods":"GET,POST,PATCH,DELETE,OPTIONS" }, body: JSON.stringify(body) });
         if(request.method()==='OPTIONS')return send(null,200);
+        if(url.pathname.endsWith('/rpc/regional_catalog'))return send(regional);
+        if(url.pathname.endsWith('/rpc/save_regional_entry')) {
+          const body=request.postDataJSON();
+          assert.equal(body.kind,'course');
+          const existing=regional.courses.find(row=>row.id===body.details.id);
+          if(existing)Object.assign(existing,body.details);
+          else regional.courses.push({...body.details,id,enabled:true});
+          return send(id);
+        }
         if(url.origin===authOrigin && url.pathname.endsWith('/get-session'))return send({user,session:{id,userId:id,token:'fixture',expiresAt:new Date(Date.now()+3600000).toISOString(),createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()}});
         if(url.origin===authOrigin && url.pathname.endsWith('/token'))return send({token:jwt});
         // Data API has a database prefix; table routing remains PostgREST.
@@ -122,6 +132,24 @@ for (const viewport of [{ width: 1440, height: 1000 }, { width: 390, height: 844
       await page.goto(`${origin}/plans?q=${encodeURIComponent("Última página")}`);
       await page.getByText("1 plano encontrado", { exact: true }).waitFor();
       await page.getByRole("link", { name: "Última página", exact: true }).waitFor();
+      // KAN-51: management works in both themes/viewports and archives records.
+      await page.goto(`${origin}/regional`);
+      await page.getByRole('button',{name:'Cursos',exact:true}).click();
+      await page.getByLabel('Nome',{exact:true}).fill('Curso regional de teste');
+      await page.getByRole('button',{name:'Salvar',exact:true}).click();
+      await page.getByText('Curso regional de teste',{exact:true}).waitFor();
+      await page.getByRole('button',{name:'Editar',exact:true}).click();
+      await page.getByLabel('Nome',{exact:true}).fill('Curso revisado');
+      await page.getByRole('button',{name:'Salvar',exact:true}).click();
+      await page.getByText('Curso revisado',{exact:true}).waitFor();
+      await page.getByRole('button',{name:'Desativar',exact:true}).click();
+      await page.getByText('Inativo — histórico preservado',{exact:true}).waitFor();
+      assert.equal(regional.courses.length,1);
+      assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+      if(process.env.SCREENSHOT_DIR)await page.screenshot({path:join(process.env.SCREENSHOT_DIR,`regional-${viewport.width}-dark.png`),fullPage:true});
+      await page.getByRole('button',{name:'Ativar modo claro',exact:true}).click();
+      await page.waitForFunction(()=>!document.documentElement.classList.contains('dark'));
+      if(process.env.SCREENSHOT_DIR)await page.screenshot({path:join(process.env.SCREENSHOT_DIR,`regional-${viewport.width}-light.png`),fullPage:true});
       assert.deepEqual(errors, []);
     } finally {
       if (browser) await browser.close();
