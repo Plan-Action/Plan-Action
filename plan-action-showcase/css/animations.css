@@ -1,8 +1,0 @@
-.reveal { opacity: 0; transform: translateY(18px); transition: opacity .65s ease, transform .65s ease; }
-.reveal.in-view { opacity: 1; transform: translateY(0); }
-.reveal-delay { transition-delay: .12s; }
-.reveal-delay-2 { transition-delay: .22s; }
-.feature-card { opacity: 0; transform: translateY(18px); }
-.feature-card.in-view { opacity: 1; transform: translateY(0); transition: opacity .65s ease, transform .65s ease; }
-.hero-text.reveal { opacity: 1; transform: none; }
-.reduced-motion *, .reduced-motion *::before, .reduced-motion *::after { animation-duration: .001ms !important; scroll-behavior: auto !important; transition-duration: .001ms !important; }
