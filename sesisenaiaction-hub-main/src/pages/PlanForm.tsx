@@ -14,6 +14,7 @@ import { ArrowLeft, Loader2, Save, Search } from "lucide-react";
 import { format } from "date-fns";
 
 import { useDepartments } from "@/hooks/use-departments";
+import { RegionalClassPicker } from '@/components/RegionalClassPicker';
 import { planFilterSuffix } from "@/lib/plan-navigation";
 
 interface Professor {
@@ -39,6 +40,7 @@ export default function PlanForm() {
   const [professorSearch, setProfessorSearch] = useState("");
   
   const [formData, setFormData] = useState({
+    class_id: '',
     department: "",
     title: "",
     description: "",
@@ -90,6 +92,7 @@ export default function PlanForm() {
 
       if (plan) {
         setFormData({
+          class_id: (plan as typeof plan & { class_id?: string | null }).class_id ?? '',
           department: plan.department || "",
           title: plan.title,
           description: plan.description,
@@ -274,7 +277,7 @@ export default function PlanForm() {
           </Card>
 
           <Card className="shadow-none">
-            <CardHeader className="border-b pb-4"><CardTitle>Onde a ação será realizada?</CardTitle><CardDescription>Where · Identifique o ambiente de execução dentro da unidade de Blumenau.</CardDescription></CardHeader>
+            <CardHeader className="border-b pb-4"><CardTitle>Onde a ação será realizada?</CardTitle><CardDescription>Where · Identifique a unidade e o ambiente de execução.</CardDescription></CardHeader>
             <CardContent className="space-y-4 pt-5">
                 <div className="space-y-2">
                   <Label htmlFor="where_location">Local de execução</Label>
@@ -328,7 +331,7 @@ export default function PlanForm() {
               <Select value={formData.department} disabled={isEditing && !!formData.department || !canChooseDepartment}
                 onValueChange={(department) => {
                   if (!department || !departments.includes(department)) return;
-                  setFormData({ ...formData, department });
+                  setFormData({ ...formData, department, class_id: '' });
                   setSelectedProfessors([]);
                   setProfessorSearch("");
                 }}>
@@ -336,6 +339,7 @@ export default function PlanForm() {
                 <SelectContent>{departments.map((name) => <SelectItem key={name} value={name}>{name}</SelectItem>)}</SelectContent>
               </Select>
               <p className="text-sm text-muted-foreground">Os participantes devem pertencer ao departamento escolhido.{!canChooseDepartment && !formData.department ? " Solicite ao Admin a definição do seu departamento." : ""}</p>
+              <RegionalClassPicker value={formData.class_id} department={formData.department} onChange={class_id => setFormData(current => ({ ...current, class_id }))} />
             </CardContent>
           </Card>
 

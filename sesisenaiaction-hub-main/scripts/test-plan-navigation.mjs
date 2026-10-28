@@ -54,6 +54,16 @@ test("no match and empty authorized datasets return empty results", () => {
   assert.deepEqual(filterPlans([], filters), []);
 });
 
+test('regional filter preserves class context and distinguishes legacy plans', () => {
+  const classId = '00000000-0000-0000-0000-000000000123';
+  const rows = [{...plans[0],class_id:classId},{...plans[1],class_id:null}];
+  const params = new URLSearchParams(`class=${classId}`);
+  assert.equal(readPlanFilters(new URLSearchParams(planFilterSuffix(params))).classId,classId);
+  assert.deepEqual(filterPlans(rows,readPlanFilters(params)),[rows[0]]);
+  assert.deepEqual(filterPlans(rows,readPlanFilters(new URLSearchParams('class=legacy'))),[rows[1]]);
+  assert.deepEqual(filterPlans(rows,readPlanFilters(new URLSearchParams('class=unknown'))),[]);
+});
+
 test("active and deadline filters match the dashboard indicators", () => {
   const dateKey = (offset) => {
     const date = new Date();

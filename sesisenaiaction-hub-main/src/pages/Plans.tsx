@@ -12,9 +12,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useDepartments } from "@/hooks/use-departments";
+import { regionalClassLabel, useRegionalCatalog } from '@/hooks/use-regional-catalog';
 import { filterPlans, planFilterSuffix, readPlanFilters, writePlanFilters, type PlanFilters } from "@/lib/plan-navigation";
 
 interface Plan {
+  class_id?: string | null;
   id: string;
   title: string;
   description: string;
@@ -28,6 +30,7 @@ interface Plan {
 export default function Plans() {
   const navigate = useNavigate();
   const departments = useDepartments();
+  const { catalog } = useRegionalCatalog();
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadFailed, setLoadFailed] = useState(false);
@@ -36,7 +39,7 @@ export default function Plans() {
   const filters = readPlanFilters(params);
   const { search, department: departmentFilter, status: statusFilter, priority: priorityFilter, deadline: deadlineFilter } = filters;
   const filterSuffix = planFilterSuffix(params);
-  const hasFilters = Boolean(search.trim() || departmentFilter !== "all" || statusFilter !== "all" || priorityFilter !== "all" || deadlineFilter !== "all");
+  const hasFilters = Boolean(search.trim() || departmentFilter !== "all" || statusFilter !== "all" || priorityFilter !== "all" || deadlineFilter !== "all" || (filters.classId && filters.classId !== 'all'));
   const filteredPlans = filterPlans(plans, filters);
   const updateFilter = (key: keyof PlanFilters, value: string) => {
     setParams((current) => writePlanFilters({ ...readPlanFilters(current), [key]: value }), { replace: true });
@@ -70,7 +73,7 @@ export default function Plans() {
         const rows: Plan[] = [];
         for (let offset = 0; ; offset += 1000) {
           const { data, error } = await supabase.from("action_plans")
-            .select("id, title, description, status, priority, start_date, end_date, department")
+            .select("id, title, description, status, priority, start_date, end_date, department, class_id")
             .order("created_at", { ascending: false }).order("id")
             .range(offset, offset + 999);
           if (!active) return;
@@ -193,6 +196,12 @@ export default function Plans() {
             </SelectContent>
           </Select>
         </div>
+        <select aria-label="Filtrar por unidade, curso e turma" className="flex h-10 w-full rounded-sm border border-input bg-background px-3 text-sm" value={filters.classId ?? 'all'} onChange={event => updateFilter('classId', event.target.value)}>
+          <option value="all">Todas as unidades, cursos e turmas</option>
+          <option value="legacy">Planos gerais / legados sem turma</option>
+          {filters.classId && !['all','legacy'].includes(filters.classId) && !catalog.classes.some(row => row.id === filters.classId) && <option value={filters.classId}>Turma indisponível</option>}
+          {catalog.classes.map(row => <option key={row.id} value={row.id}>{regionalClassLabel(catalog, row)}{!row.enabled ? ' (inativa)' : ''}</option>)}
+        </select>
         {hasFilters && <div className="flex flex-wrap items-center justify-between gap-3">
           <p role="status" className="text-sm text-muted-foreground">{loading ? "Buscando planos..." : loadFailed ? "Consulta indisponível" : `${filteredPlans.length} plano${filteredPlans.length === 1 ? "" : "s"} encontrado${filteredPlans.length === 1 ? "" : "s"}`}</p>
           <Button variant="ghost" size="sm" onClick={() => setParams({}, { replace: true })}>Limpar filtros</Button>

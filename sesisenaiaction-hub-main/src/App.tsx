@@ -12,6 +12,7 @@ import Plans from "./pages/Plans";
 import PlanForm from "./pages/PlanForm";
 import PlanDetails from "./pages/PlanDetails";
 import Users from "./pages/Users";
+import RegionalCatalog from "./pages/RegionalCatalog";
 import Account from "./pages/Account";
 import Support from "./pages/Support";
 import NotFound from "./pages/NotFound";
@@ -34,6 +35,7 @@ const App = () => (
             <Route path="/plans/:id" element={<RequirePersonalPassword><PlanDetails /></RequirePersonalPassword>} />
             <Route path="/plans/:id/edit" element={<RequirePersonalPassword><PlanForm /></RequirePersonalPassword>} />
             <Route path="/users" element={<RequirePersonalPassword><Users /></RequirePersonalPassword>} />
+            <Route path="/regional" element={<RequirePersonalPassword><RegionalCatalog /></RequirePersonalPassword>} />
             <Route path="/account" element={<RequirePersonalPassword><Account /></RequirePersonalPassword>} />
             <Route path="/support" element={<RequirePersonalPassword><Support /></RequirePersonalPassword>} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

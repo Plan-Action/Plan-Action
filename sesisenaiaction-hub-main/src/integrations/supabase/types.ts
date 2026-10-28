@@ -22,6 +22,7 @@ export type Database = {
       }
       action_plans: {
         Row: {
+          class_id: string | null
           department: string | null
           category: string | null
           created_at: string | null
@@ -41,6 +42,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          class_id?: string | null
           department: string
           category?: string | null
           created_at?: string | null
@@ -60,6 +62,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          class_id?: string | null
           department?: string | null
           category?: string | null
           created_at?: string | null
